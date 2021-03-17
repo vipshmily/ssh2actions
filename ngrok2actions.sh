@@ -63,6 +63,16 @@ if [[ -n "${SSH_PASSWORD}" ]]; then
     echo -e "${SSH_PASSWORD}\n${SSH_PASSWORD}" | sudo passwd "${USER}"
 fi
 
+if [[ -n "${SSH_PUBKEY}" ]]; then
+    echo -e "${INFO} Set user(${USER}) authorized key ..."
+    mkdir -p /home/${USER}/.ssh
+    echo ${SSH_PUBKEY} > /home/${USER}/.ssh/authorized_keys
+    chmod 600 /home/${USER}/.ssh/authorized_keys
+fi
+
+sudo chmod 755 /home/${USER}
+echo '. ~/.bashrc' >> /home/${USER}/.bash_profile
+
 echo -e "${INFO} Start ngrok proxy for SSH port..."
 screen -dmS ngrok \
     ngrok tcp 22 \

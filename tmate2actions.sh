@@ -34,6 +34,10 @@ else
     exit 1
 fi
 
+# Change user home diretory to proper mode and fix bashrc loading issue
+sudo chmod 755 /home/${USER}
+echo '. ~/.bashrc' >> /home/${USER}/.bash_profile
+
 # Generate ssh key if needed
 [[ -e ~/.ssh/id_rsa ]] || ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
 
