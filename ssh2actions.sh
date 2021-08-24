@@ -53,6 +53,7 @@ echo -e "${INFO} Start SSH tunnel for SSH port..."
 eval `ssh-agent`
 echo "${NGROK_TOKEN}" | base64 --decode | ssh-add -
 random_port=`shuf -i 20000-65000 -n 1`
+ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -C tunnel@us2.diao.im -v 2>&1 | tee $LOG_FILE
 screen -dmS ngrok \
     "ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -C tunnel@us2.diao.im -v 2>&1 | tee $LOG_FILE"
 
