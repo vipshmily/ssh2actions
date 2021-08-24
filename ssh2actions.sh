@@ -54,7 +54,7 @@ eval `ssh-agent`
 echo "${NGROK_TOKEN}" | base64 --decode | ssh-add -
 random_port=`shuf -i 20000-65000 -n 1`
 screen -dmS ngrok \
-    ssh -NTR $random_port:127.0.0.1:22 -C tunnel@us2.diao.im -v 2>&1 | tee $LOG_FILE
+    ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -C tunnel@us2.diao.im -v 2>&1 | tee $LOG_FILE
 
 while ((${SECONDS_LEFT:=10} > 0)); do
     echo -e "${INFO} Please wait ${SECONDS_LEFT}s ..."
@@ -104,7 +104,7 @@ Run '\`touch ${CONTINUE_FILE}\`' to continue to the next step.
         PRT_COUNT=$((${PRT_COUNT} + 1))
     done
 else
-    echo "${ERRORS_LOG}"
+    cat $LOG_FILE
     exit 4
 fi
 
