@@ -54,7 +54,7 @@ eval `ssh-agent`
 echo "${NGROK_TOKEN}" | base64 --decode | ssh-add -
 random_port=`shuf -i 20000-65000 -n 1`
 screen -dmS ngrok \
-    ssh -NTR $random_port:127.0.0.1:22 -C tunnel@us2.diao.im -v
+    ssh -NTR $random_port:127.0.0.1:22 -C tunnel@us2.diao.im -v 2>&1 | tee $LOG_FILE
 
 while ((${SECONDS_LEFT:=10} > 0)); do
     echo -e "${INFO} Please wait ${SECONDS_LEFT}s ..."
@@ -62,9 +62,9 @@ while ((${SECONDS_LEFT:=10} > 0)); do
     SECONDS_LEFT=$((${SECONDS_LEFT} - 1))
 done
 
-ERRORS_LOG=$(grep "command failed" ${LOG_FILE})
+ERRORS_LOG=$(grep "forwarding requests processed" ${LOG_FILE})
 
-if [[ -e "${LOG_FILE}" && -z "${ERRORS_LOG}" ]]; then
+if [[ -e "${LOG_FILE}" && -n "${ERRORS_LOG}" ]]; then
     SSH_CMD="ssh us2.diao.im -p $random_port"
     MSG="
 *GitHub Actions - SSH tunnel info:*
