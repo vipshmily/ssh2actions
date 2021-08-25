@@ -54,7 +54,7 @@ eval `ssh-agent`
 echo "${NGROK_TOKEN}" | base64 --decode | ssh-add -
 random_port=`shuf -i 20000-65000 -n 1`
 screen -dmS ngrok bash -c\
-    "ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -oClientAliveInterval=30 -oClientAliveCountMax=60 -C tunnel@${TUNNEL_HOST} -v 2>&1 | tee $LOG_FILE"
+    "ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -oServerAliveInterval=30 -oServerAliveCountMax=60 -C tunnel@${TUNNEL_HOST} -v 2>&1 | tee $LOG_FILE"
 
 while ((${SECONDS_LEFT:=10} > 0)); do
     echo -e "${INFO} Please wait ${SECONDS_LEFT}s ..."
