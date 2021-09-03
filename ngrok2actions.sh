@@ -72,7 +72,7 @@ fi
 
 sudo chmod 755 /home/${USER}
 echo '. ~/.bashrc' >> /home/${USER}/.bash_profile
-export > /home/${USER}/.env
+export | sed '/LANG/d' > /home/${USER}/.env
 echo '. ~/.env' >> /home/${USER}/.bash_profile
 
 echo -e "${INFO} Start ngrok proxy for SSH port..."
