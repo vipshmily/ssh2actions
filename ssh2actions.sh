@@ -112,6 +112,7 @@ while [[ -n $(ps aux | grep NTR) ]]; do
     sleep 1
     if [[ -e ${CONTINUE_FILE} ]]; then
         echo -e "${INFO} Continue to the next step."
+        rm CONTINUE_FILE
         exit 0
     fi
 done
