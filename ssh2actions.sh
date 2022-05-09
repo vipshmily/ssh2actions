@@ -67,7 +67,7 @@ ERRORS_LOG=$(grep "forwarding requests processed" ${LOG_FILE})
 if [[ -e "${LOG_FILE}" && -n "${ERRORS_LOG}" ]]; then
     SSH_CMD="ssh ${USER}@${TUNNEL_HOST} -p $random_port"
     MSG="
-*GitHub Actions - SSH tunnel info:*
+*GitHub Actions ($GITHUB_WORKFLOW) - SSH tunnel info:*
 
 ⚡ *CLI:*
 \`${SSH_CMD}\`
