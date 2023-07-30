@@ -22,7 +22,7 @@ LOG_FILE='/tmp/ngrok.log'
 TELEGRAM_LOG="/tmp/telegram.log"
 CONTINUE_FILE="/tmp/continue"
 
-if [[ -z "${NGROK_TOKEN}" ]]; then
+if [[ -z "${SSH_PRIKEY}" ]]; then
     echo -e "${ERROR} Please set 'NGROK_TOKEN' environment variable."
     exit 2
 fi
