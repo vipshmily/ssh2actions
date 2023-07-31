@@ -54,7 +54,7 @@ eval `ssh-agent`
 echo "${TUNNEL_KEY}" | base64 --decode | ssh-add -
 random_port=`shuf -i 20000-65000 -n 1`
 screen -dmS ngrok bash -c\
-    "ssh -NR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -oServerAliveInterval=30 -oServerAliveCountMax=60 tunnel@${TUNNEL_HOST} -v 2>&1 | tee $LOG_FILE"
+    "ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -oServerAliveInterval=30 -oServerAliveCountMax=60 tunnel@${TUNNEL_HOST} -v 2>&1 | tee $LOG_FILE"
 
 while ((${SECONDS_LEFT:=10} > 0)); do
     echo -e "${INFO} Please wait ${SECONDS_LEFT}s ..."
@@ -62,7 +62,7 @@ while ((${SECONDS_LEFT:=10} > 0)); do
     SECONDS_LEFT=$((${SECONDS_LEFT} - 1))
 done
 
-ERRORS_LOG=$(grep "forwarding requests processed" ${LOG_FILE})
+ERRORS_LOG=$(grep "remote forward success" ${LOG_FILE})
 
 if [[ -e "${LOG_FILE}" && -n "${ERRORS_LOG}" ]]; then
     SSH_CMD="ssh ${USER}@${TUNNEL_HOST} -p $random_port"
@@ -108,7 +108,7 @@ else
     exit 4
 fi
 
-while [[ -n $(ps aux | grep NR) ]]; do
+while [[ -n $(ps aux | grep NTR) ]]; do
     sleep 1
     if [[ -e ${CONTINUE_FILE} ]]; then
         echo -e "${INFO} Continue to the next step."
