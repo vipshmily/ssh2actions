@@ -39,15 +39,15 @@ fi
 
 if [[ -n "${SSH_PUBKEY}" ]]; then
     echo -e "${INFO} Set user(${USER}) authorized key ..."
-    mkdir -p /home/${USER}/.ssh
-    echo ${SSH_PUBKEY} > /home/${USER}/.ssh/authorized_keys
-    chmod 600 /home/${USER}/.ssh/authorized_keys
+    mkdir -p ${HOME}/.ssh
+    echo ${SSH_PUBKEY} > ${HOME}/.ssh/authorized_keys
+    chmod 600 ${HOME}/.ssh/authorized_keys
 fi
 
-sudo chmod 755 /home/${USER}
-echo '. ~/.bashrc' >> /home/${USER}/.bash_profile
-export | sed '/LANG/d' > /home/${USER}/.env
-echo '. ~/.env' >> /home/${USER}/.bash_profile
+sudo chmod 755 ${HOME}
+echo '. ~/.bashrc' >> ${HOME}/.bash_profile
+export | sed '/LANG/d' > ${HOME}/.env
+echo '. ~/.env' >> ${HOME}/.bash_profile
 
 echo -e "${INFO} Start SSH tunnel for SSH port..."
 eval `ssh-agent`
