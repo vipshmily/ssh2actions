@@ -52,7 +52,7 @@ echo '. ~/.env' >> ${HOME}/.bash_profile
 echo -e "${INFO} Start SSH tunnel for SSH port..."
 eval `ssh-agent`
 echo "${TUNNEL_KEY}" | base64 --decode | ssh-add -
-random_port=`shuf -i 20000-65000 -n 1` || random_port=`jot -r 1 20000 65000`
+random_port=`shuf -i 9000-10000 -n 1` || random_port=`jot -r 1 20000 65000`
 screen -dmS ngrok bash -c\
     "ssh -NTR $random_port:127.0.0.1:22 -oStrictHostKeyChecking=no -oServerAliveInterval=30 -oServerAliveCountMax=60 tunnel@${TUNNEL_HOST} -v 2>&1 | tee $LOG_FILE"
 
