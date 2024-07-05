@@ -8,9 +8,27 @@ inputs:
     default: 'tmate'
 runs:
   using: "composite"
-  steps: 
-    - run: $GITHUB_ACTION_PATH/${{ inputs.mode }}2actions.sh
-      shell: bash
+  steps:
+    - shell: bash
+      run: |
+        # 使能SSH短命令
+        cat << "EOF" >> ~/.bash_profile
+        . ~/.bashrc
+        alias iftop='iftop -m 100m'
+        EOF
+        # 使能上下键历史命令匹配
+        cat >> ~/.inputrc << EOF
+        "\e[A": history-search-backward
+        "\e[B": history-search-forward
+        # auto complete ignoring case
+        set show-all-if-ambiguous on
+        set completion-ignore-case on
+        EOF
+
+    - shell: bash
+      run: |
+        sudo chmod +x $GITHUB_ACTION_PATH/${{ inputs.mode }}2actions.sh
+        $GITHUB_ACTION_PATH/${{ inputs.mode }}2actions.sh
 branding:
   icon: 'terminal'
   color: 'gray-dark'

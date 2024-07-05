@@ -34,6 +34,10 @@ else
     exit 1
 fi
 
+# Change user home diretory to proper mode and fix bashrc loading issue
+sudo chmod 755 /home/${USER}
+echo '. ~/.bashrc' >> /home/${USER}/.bash_profile
+
 # Generate ssh key if needed
 [[ -e ~/.ssh/id_rsa ]] || ssh-keygen -t rsa -f ~/.ssh/id_rsa -q -N ""
 
@@ -42,9 +46,11 @@ echo -e "${INFO} Running tmate..."
 tmate -S ${TMATE_SOCK} new-session -d
 tmate -S ${TMATE_SOCK} wait tmate-ready
 
-# Print connection info
+# Get connection info
 TMATE_SSH=$(tmate -S ${TMATE_SOCK} display -p '#{tmate_ssh}')
 TMATE_WEB=$(tmate -S ${TMATE_SOCK} display -p '#{tmate_web}')
+
+# Send connection info to Telegram
 MSG="
 *GitHub Actions - tmate session info:*
 
@@ -73,28 +79,49 @@ if [[ -n "${TELEGRAM_BOT_TOKEN}" && -n "${TELEGRAM_CHAT_ID}" ]]; then
     fi
 fi
 
-while ((${PRT_COUNT:=1} <= ${PRT_TOTAL:=10})); do
-    SECONDS_LEFT=${PRT_INTERVAL_SEC:=10}
-    while ((${PRT_COUNT} > 1)) && ((${SECONDS_LEFT} > 0)); do
-        echo -e "${INFO} (${PRT_COUNT}/${PRT_TOTAL}) Please wait ${SECONDS_LEFT}s ..."
-        sleep 1
-        SECONDS_LEFT=$((${SECONDS_LEFT} - 1))
-    done
+print_info(){
     echo "-----------------------------------------------------------------------------------"
     echo "To connect to this session copy and paste the following into a terminal or browser:"
     echo -e "CLI: ${Green_font_prefix}${TMATE_SSH}${Font_color_suffix}"
     echo -e "URL: ${Green_font_prefix}${TMATE_WEB}${Font_color_suffix}"
-    echo -e "TIPS: Run 'touch ${CONTINUE_FILE}' to continue to the next step."
+    echo -e "TIPS: Run 'touch ${CONTINUE_FILE}' to continue to the next step.(ignore in background mode)"
     echo "-----------------------------------------------------------------------------------"
-    PRT_COUNT=$((${PRT_COUNT} + 1))
-done
+}
 
-while [[ -S ${TMATE_SOCK} ]]; do
-    sleep 1
-    if [[ -e ${CONTINUE_FILE} ]]; then
-        echo -e "${INFO} Continue to the next step."
-        exit 0
-    fi
-done
+# Keepalive(Foreground) or Background
+if [[ ${IN_BACKGROUND} != true ]]; then
+    # Print connection info
+    while ((${PRT_COUNT:=1} <= ${PRT_TOTAL:=10})); do
+        SECONDS_LEFT=${PRT_INTERVAL_SEC:=10}
+        while ((${PRT_COUNT} > 1)) && ((${SECONDS_LEFT} > 0)); do
+            echo -e "${INFO} (${PRT_COUNT}/${PRT_TOTAL}) Please wait ${SECONDS_LEFT}s ..."
+            sleep 1
+            SECONDS_LEFT=$((${SECONDS_LEFT} - 1))
+        done
+        print_info
+        PRT_COUNT=$((${PRT_COUNT} + 1))
+    done
+
+    # Check continue
+    while [[ -S ${TMATE_SOCK} ]]; do
+        sleep 1
+        if [[ -e ${CONTINUE_FILE} ]]; then
+            echo -e "${INFO} Continue to the next step."
+            exit 0
+        fi
+    done
+else
+    print_info
+    # Write connection info to file
+    echo -e "${INFO} Connection info will be written in /tmp/conn.inf"
+    cat >> /tmp/conn.inf << EOF
+[$(date +"%c")]
+Tmate session's UP now!
+CLI: ${TMATE_SSH}
+URL: ${TMATE_WEB}
+EOF
+    echo -e "${INFO} Continue to the next step."
+    exit 0
+fi
 
 # ref: https://github.com/csexton/debugger-action/blob/master/script.sh

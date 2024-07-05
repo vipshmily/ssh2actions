@@ -7,7 +7,7 @@
 #
 # https://github.com/P3TERX/ssh2actions
 # File name：ngrok2actions.sh
-# Description: Connect to Github Actions VM via SSH by using ngrok
+# Description: Connect to Github Actions VM via SSH by using n2n
 # Version: 2.0
 #
 
@@ -18,13 +18,14 @@ Red_background_prefix="\033[41;37m"
 Font_color_suffix="\033[0m"
 INFO="[${Green_font_prefix}INFO${Font_color_suffix}]"
 ERROR="[${Red_font_prefix}ERROR${Font_color_suffix}]"
-LOG_FILE='/tmp/ngrok.log'
+LOG_FILE='/tmp/n2n.log'
+ERR_FILE='/tmp/n2n.err'
 TELEGRAM_LOG="/tmp/telegram.log"
 CONTINUE_FILE="/tmp/continue"
 
-# Check secret - ngrok token
-if [[ -z "${NGROK_TOKEN}" ]]; then
-    echo -e "${ERROR} Please set 'NGROK_TOKEN' environment variable."
+# Check secret - n2n token
+if [[ -z "${N2N_ARG}" ]]; then
+    echo -e "${N2N_ARG} Please set 'N2N_ARG' environment variable."
     exit 2
 fi
 
@@ -37,23 +38,18 @@ else
     echo -e "${SSH_PASSWORD}\n${SSH_PASSWORD}" | sudo passwd "${USER}"
 fi
 
-# Install ngrok
+# Install n2n
 if [[ -n "$(uname | grep -i Linux)" ]]; then
-    echo -e "${INFO} Install ngrok ..."
-    curl -fsSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-amd64.zip -o ngrok.zip
-    unzip ngrok.zip ngrok
-    rm ngrok.zip
-    chmod +x ngrok
-    sudo mv ngrok /usr/local/bin
-    ngrok -v
+    echo -e "${INFO} Install n2n ..."
+    wget https://github.com/ntop/n2n/releases/download/3.1.1/n2n_3.1.1_amd64.deb
+    sudo -E dpkg -i n2n_3.1.1_amd64.deb
+    edge -h
 elif [[ -n "$(uname | grep -i Darwin)" ]]; then
-    echo -e "${INFO} Install ngrok ..."
-    curl -fsSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-amd64.zip -o ngrok.zip
-    unzip ngrok.zip ngrok
-    rm ngrok.zip
-    chmod +x ngrok
-    sudo mv ngrok /usr/local/bin
-    ngrok -v
+    echo -e "${INFO} Install n2n ..."
+    echo -e "${INFO} n2n installion on MacOS is not tested yest, may failed..."
+    wget https://github.com/ntop/n2n/releases/download/3.1.1/n2n_3.1.1_amd64.deb
+    sudo -E dpkg -i n2n_3.1.1_amd64.deb
+    edge -h
     USER=root
     echo -e "${INFO} Set SSH service ..."
     echo 'PermitRootLogin yes' | sudo tee -a /etc/ssh/sshd_config >/dev/null
@@ -64,46 +60,35 @@ else
     exit 1
 fi
 
-if [[ -n "${SSH_PUBKEY}" ]]; then
-    echo -e "${INFO} Set user(${USER}) authorized key ..."
-    mkdir -p /home/${USER}/.ssh
-    echo ${SSH_PUBKEY} > /home/${USER}/.ssh/authorized_keys
-    chmod 600 /home/${USER}/.ssh/authorized_keys
-fi
+# Start n2n tcp tunnel to port 22
+random_id=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 16)
+echo -e "${INFO} Starting n2n edgenode, with random ID $random_id..."
+sudo edge -d edge0 -r -I $random_id $N2N_ARG 2>${ERR_FILE} | sed '/supernode/d' | tee ${LOG_FILE}
 
-sudo chmod 755 /home/${USER}
-echo '. ~/.bashrc' >> /home/${USER}/.bash_profile
-export | sed '/LANG/d' > /home/${USER}/.env
-echo '. ~/.env' >> /home/${USER}/.bash_profile
-
-# Start ngrok tcp tunnel to port 22
-echo -e "${INFO} Start ngrok proxy for SSH port..."
-screen -dmS ngrok \
-    ngrok tcp 22 \
-    --log "${LOG_FILE}" \
-    --authtoken "${NGROK_TOKEN}" \
-    --region "${NGROK_REGION:-us}"
-
-# Sleep 10
+# Wait till online
+echo -e "${INFO} Wait for DHCP finish.."
+echo -e "${INFO} Please allow up to 10s ..."
 while ((${SECONDS_LEFT:=10} > 0)); do
+    grep -q 'created local tap device IP' ${LOG_FILE} && break
+
     echo -e "${INFO} Please wait ${SECONDS_LEFT}s ..."
     sleep 1
     SECONDS_LEFT=$((${SECONDS_LEFT} - 1))
 done
 
 # Get connection info
-ERRORS_LOG=$(grep "command failed" ${LOG_FILE})
-
-if [[ -e "${LOG_FILE}" && -z "${ERRORS_LOG}" ]]; then
-    SSH_CMD="$(grep -oE "tcp://(.+)" ${LOG_FILE} | sed "s/tcp:\/\//ssh ${USER}@/" | sed "s/:/ -p /")"
+if [[ -n `grep 'created local tap device IP' ${LOG_FILE}` ]]; then
+    ipaddress=$(ip -o -4 addr show dev edge0 | awk '{split($4,a,"/"); print a[1]}')
+    SSH_CMD="ssh runner@$ipaddress"
 else
-    echo "${ERRORS_LOG}"
+    echo -e "${ERROR} Fail initializing n2n edge"
+    cat ${ERR_FILE}
     exit 4
 fi
 
 # Send connection info to Telegram
 MSG="
-*GitHub Actions - ngrok session info:*
+*GitHub Actions - n2n session info:*
 
 ⚡ *CLI:*
 \`${SSH_CMD}\`
@@ -111,7 +96,7 @@ MSG="
 🔔 *TIPS:*
 Run '\`touch ${CONTINUE_FILE}\`' to continue to the next step.
 "
-    if [[ -n "${TELEGRAM_BOT_TOKEN}" && -n "${TELEGRAM_CHAT_ID}" ]]; then
+if [[ -n "${TELEGRAM_BOT_TOKEN}" && -n "${TELEGRAM_CHAT_ID}" ]]; then
     echo -e "${INFO} Sending message to Telegram..."
     curl -sSX POST "${TELEGRAM_API_URL:-https://api.telegram.org}/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
         -d "disable_web_page_preview=true" \
@@ -148,8 +133,8 @@ if [[ ${IN_BACKGROUND} != true ]]; then
         PRT_COUNT=$((${PRT_COUNT} + 1))
     done
 
-# Check continue
-    while [[ -n $(pgrep ngrok) ]]; do
+    # Check continue
+    while [[ -n $(pgrep n2n) ]]; do
         sleep 1
         if [[ -e ${CONTINUE_FILE} ]]; then
             echo -e "${INFO} Continue to the next step."
@@ -162,10 +147,9 @@ else
     # Write connection info to file
     cat >> /tmp/conn.inf << EOF
 [$(date +"%c")]
-Ngrok tunnel's UP now!
+n2n edge's UP now!
 CLI: ${SSH_CMD}
 EOF
     echo -e "${INFO} Continue to the next step."
     exit 0
 fi
-# ref: https://gist.github.com/retyui/7115bb6acf151351a143ec8f96a7c561
